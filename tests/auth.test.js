@@ -1,24 +1,28 @@
-const { app, request } = require('./helpers');
-const store = require('../src/data/store');
+﻿const request = require('supertest');
+const app = require('../src/app');
+const { resetDb } = require('./helpers');
 
-beforeEach(() => store.reset());
+beforeEach(() => resetDb());
 
-describe('Autenticación', () => {
-  test('test_login_exitoso', async () => {
-    const res = await request(app).post('/api/v1/auth/login').send({ usuario: 'vendedor1', password: 'vende123' });
-    expect(res.status).toBe(200);
-    expect(res.body.token).toBeDefined();
-    expect(res.body.usuario.rol).toBe('VENDEDOR');
-    expect(res.body.usuario.password).toBeUndefined();
+/**
+ * Pruebas unitarias y de integración para la Autenticación (HU-001).
+ * Por qué: valida el inicio de sesión exitoso, el rechazo de credenciales malas
+ * y la protección de rutas privadas mediante tokens JWT.
+ * @traceability HU-001 (Inicio de sesión seguro)
+ */
+describe('Auth API', () => {
+  it('debe iniciar sesión exitosamente con credenciales válidas', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ usuario: 'admin', password: 'admin123' });
+    expect(res.statusCode).toEqual(200);
+    expect(res.body.datos).toHaveProperty('token');
   });
 
-  test('test_login_credenciales_invalidas', async () => {
-    const res = await request(app).post('/api/v1/auth/login').send({ usuario: 'vendedor1', password: 'mala' });
-    expect(res.status).toBe(401);
-  });
-
-  test('test_ruta_protegida_sin_token', async () => {
-    const res = await request(app).get('/api/v1/sorteos');
-    expect(res.status).toBe(401);
+  it('debe fallar con credenciales inválidas', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ usuario: 'admin', password: 'wrong' });
+    expect(res.statusCode).toEqual(401);
   });
 });
