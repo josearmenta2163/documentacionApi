@@ -1,0 +1,175 @@
+﻿openapi: 3.0.3
+info:
+  title: API Puesto de Chance y Baloto
+  version: 1.0.0
+  description: API REST para la venta, anulación, pago de premios y cierre de caja de apuestas de Chance y Baloto.
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Servidor local de desarrollo
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LoginRequest:
+      type: object
+      required: [usuario, password]
+      properties:
+        usuario:
+          type: string
+          example: vendedor1
+        password:
+          type: string
+          example: vende123
+    ChanceRequest:
+      type: object
+      required: [sorteoId, numero, valor]
+      properties:
+        sorteoId:
+          type: integer
+          example: 1
+        numero:
+          type: string
+          example: "4589"
+        valor:
+          type: integer
+          example: 2000
+    BalotoRequest:
+      type: object
+      required: [sorteoId]
+      properties:
+        sorteoId:
+          type: integer
+          example: 3
+        numeros:
+          type: array
+          items:
+            type: integer
+          example: [5, 12, 23, 34, 41]
+        superbalota:
+          type: integer
+          example: 10
+        automatico:
+          type: boolean
+          example: false
+    AnularRequest:
+      type: object
+      required: [motivo]
+      properties:
+        motivo:
+          type: string
+          example: Error de digitación del cliente
+paths:
+  /auth/login:
+    post:
+      summary: Iniciar sesión y obtener token JWT
+      tags: [Autenticación]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Inicio de sesión exitoso
+        '400':
+          description: Datos faltantes
+        '401':
+          description: Credenciales inválidas
+        '403':
+          description: Usuario inactivo
+  /sorteos:
+    get:
+      summary: Listar sorteos disponibles
+      tags: [Sorteos]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de sorteos
+    post:
+      summary: Crear un nuevo sorteo (Solo ADMIN)
+      tags: [Sorteos]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tipo:
+                  type: string
+                  enum: [CHANCE, BALOTO]
+                nombre:
+                  type: string
+                fecha:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Sorteo creado
+  /tickets/chance:
+    post:
+      summary: Vender tiquete de Chance (Solo VENDEDOR)
+      tags: [Ventas y Tiquetes]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChanceRequest'
+      responses:
+        '201':
+          description: Tiquete generado
+  /tickets/baloto:
+    post:
+      summary: Vender tiquete de Baloto (Solo VENDEDOR)
+      tags: [Ventas y Tiquetes]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BalotoRequest'
+      responses:
+        '201':
+          description: Tiquete generado
+  /tickets/{codigo}/anular:
+    patch:
+      summary: Anular un tiquete vendido
+      tags: [Ventas y Tiquetes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: codigo
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnularRequest'
+      responses:
+        '200':
+          description: Tiquete anulado
+  /caja/resumen:
+    get:
+      summary: Consultar resumen diario de caja
+      tags: [Caja]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Totales de caja calculados

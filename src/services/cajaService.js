@@ -1,7 +1,16 @@
-const { getDb, nextId } = require('../data/store');
+﻿const { getDb, nextId } = require('../data/store');
 const AppError = require('../utils/AppError');
 const { fechaLocal } = require('../utils/fechas');
 
+/**
+ * Calcula el resumen de caja de un vendedor para un día.
+ * Por qué: los tiquetes anulados no cuentan como venta, y el saldo esperado es
+ * lo vendido menos lo pagado en premios, que es el efectivo que debería haber.
+ * @traceability HU-008 (Resumen y cierre de caja)
+ * @param {number} vendedorId Identificador del vendedor.
+ * @param {string} [fecha=fechaLocal()] Día a consultar (AAAA-MM-DD), en zona horaria local.
+ * @returns {Object} Totales vendidos, premios pagados, saldo esperado y si la caja está cerrada.
+ */
 function resumen(vendedorId, fecha = fechaLocal()) {
   const db = getDb();
   const delDia = (iso) => fechaLocal(iso) === fecha;
@@ -28,6 +37,18 @@ function resumen(vendedorId, fecha = fechaLocal()) {
   };
 }
 
+/**
+ * Cierra la caja de un vendedor comparando el efectivo reportado con el esperado.
+ * Por qué: queda registrada la diferencia y su clasificación (CUADRADA, SOBRANTE o
+ * FALTANTE) para detectar descuadres; una caja ya cerrada no se puede cerrar de nuevo.
+ * @traceability HU-008 (Resumen y cierre de caja)
+ * @param {number} vendedorId Identificador del vendedor.
+ * @param {Object} datos Cuerpo de la petición.
+ * @param {number} datos.efectivoReportado Efectivo contado por el vendedor (entero, no negativo).
+ * @param {string} [datos.fecha=fechaLocal()] Día a cerrar (AAAA-MM-DD).
+ * @returns {Object} Cierre creado, con diferencia y estado.
+ * @throws {AppError} 400 si el efectivo no es un entero válido; 409 si el día ya fue cerrado.
+ */
 function cerrar(vendedorId, { efectivoReportado, fecha = fechaLocal() }) {
   if (!Number.isInteger(efectivoReportado) || efectivoReportado < 0) {
     throw new AppError('El efectivo reportado debe ser un entero positivo');

@@ -1,9 +1,25 @@
-const bcrypt = require('bcryptjs');
+﻿const bcrypt = require('bcryptjs');
 
+/** Base de datos en memoria: se pierde al reiniciar el servidor. */
 let db;
 
+/**
+ * Calcula una fecha futura a partir de ahora.
+ * @traceability RNF-004 (Datos de demostración en memoria)
+ * @param {number} h Horas a sumar.
+ * @returns {string} Fecha futura en formato ISO.
+ */
 const enHoras = (h) => new Date(Date.now() + h * 3600 * 1000).toISOString();
 
+/**
+ * Carga los datos iniciales de demostración.
+ * Por qué: el proyecto no usa base de datos real; esta función deja usuarios,
+ * sorteos abiertos y contadores de id listos para probar la API. Las contraseñas
+ * se guardan con hash bcrypt, nunca en texto plano. Los usuarios y claves de
+ * ejemplo son solo para desarrollo y pruebas.
+ * @traceability RNF-004 (Datos de demostración en memoria)
+ * @returns {void}
+ */
 function seed() {
   db = {
     usuarios: [
@@ -25,8 +41,20 @@ function seed() {
 
 seed();
 
+/**
+ * Interfaz pública del almacén de datos.
+ * @traceability RNF-004 (Datos de demostración en memoria)
+ */
 module.exports = {
+  /** Devuelve la base de datos en memoria (usuarios, sorteos, tickets, pagos, cierres). */
   getDb: () => db,
+  /**
+   * Entrega el siguiente identificador de una tabla y avanza el contador.
+   * Por qué: reemplaza el autoincremental de una base de datos real.
+   * @param {'sorteos'|'tickets'|'pagos'|'cierres'} tabla Nombre de la tabla.
+   * @returns {number} Identificador nuevo.
+   */
   nextId: (tabla) => db.seq[tabla]++,
+  /** Restaura los datos iniciales; lo usan las pruebas para empezar siempre limpias. */
   reset: seed,
 };
